@@ -12,8 +12,9 @@ import (
 )
 
 type Yeelight struct {
-	Address string
-	Conn    net.Conn
+	Address   string
+	Peristent bool `default0:"false"`
+	Conn      net.Conn
 }
 
 type Command struct {
@@ -70,7 +71,10 @@ func (yl *Yeelight) SendCommand(c Command) (r Response, err error) {
 	if err = yl.Connect(); err != nil {
 		return
 	}
-	defer yl.Conn.Close()
+
+	if !yl.Peristent {
+		defer yl.Conn.Close()
+	}
 
 	cmdJSON, err := c.ToJson()
 	if err != nil {
@@ -227,4 +231,8 @@ func (yl *Yeelight) IsOn() (b bool, err error) {
 	b = (r.Result.([]interface{})[0].(string) == "on")
 
 	return b, err
+}
+
+func (yl *Yeelight) Disconnect() {
+	yl.Conn.Close()
 }
