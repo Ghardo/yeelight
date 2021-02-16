@@ -15,6 +15,7 @@ type Yeelight struct {
 	Address   string
 	Peristent bool `default0:"false"`
 	Conn      net.Conn
+	Smooth    int `default0:"200"`
 }
 
 type Command struct {
@@ -124,7 +125,7 @@ func (yl *Yeelight) SetHexColor(color string) (err error) {
 
 	c := Command{
 		Method: "set_rgb",
-		Params: []interface{}{n, "smooth", 500},
+		Params: []interface{}{n, "smooth", yl.Smooth},
 	}
 
 	_, err = yl.SendCommand(c)
@@ -154,7 +155,7 @@ func (yl *Yeelight) GetHexColor() (h string, err error) {
 func (yl *Yeelight) SetBright(value int8) (err error) {
 	c := Command{
 		Method: "set_bright",
-		Params: []interface{}{value, "smooth", 500},
+		Params: []interface{}{value, "smooth", yl.Smooth},
 	}
 
 	_, err = yl.SendCommand(c)
@@ -183,7 +184,7 @@ func (yl *Yeelight) GetBright() (value int8, err error) {
 func (yl *Yeelight) SetOn() (err error) {
 	c := Command{
 		Method: "set_power",
-		Params: []interface{}{"on", "smooth", 500},
+		Params: []interface{}{"on", "smooth", yl.Smooth},
 	}
 
 	_, err = yl.SendCommand(c)
@@ -197,7 +198,7 @@ func (yl *Yeelight) SetOn() (err error) {
 func (yl *Yeelight) SetOff() (err error) {
 	c := Command{
 		Method: "set_power",
-		Params: []interface{}{"off", "smooth", 500},
+		Params: []interface{}{"off", "smooth", yl.Smooth},
 	}
 
 	_, err = yl.SendCommand(c)
