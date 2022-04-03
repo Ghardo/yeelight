@@ -60,6 +60,10 @@ func (r *Response) FromJson(data []byte) error {
 }
 
 func (yl *Yeelight) Connect() (err error) {
+	if yl.Timeout == 0 {
+		yl.Timeout = 3 * time.Second
+	}
+
 	yl.Conn, err = net.DialTimeout("tcp", yl.Address, yl.Timeout)
 	if err != nil {
 		return err
