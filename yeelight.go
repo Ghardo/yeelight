@@ -171,6 +171,20 @@ func (yl *Yeelight) SetBright(value int8) (err error) {
 	return nil
 }
 
+func (yl *Yeelight) SetColorTemperature(value int16) (err error) {
+	c := Command{
+		Method: "set_ct_abx",
+		Params: []interface{}{value, "smooth", yl.Smooth},
+	}
+
+	_, err = yl.SendCommand(c)
+	if err != nil {
+		return
+	}
+
+	return nil
+}
+
 func (yl *Yeelight) GetBright() (value int8, err error) {
 	r, err := yl.GetProperty("bright")
 	if err != nil {
