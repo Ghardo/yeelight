@@ -12,8 +12,9 @@ import (
 )
 
 type Yeelight struct {
-	Address    string
-	Persistent bool `default0:"false"`
+	YLID 	   int32       `json:"id"`
+	Address    string      `json:"address"`
+	Persistent bool        `default0:"false"`
 	Conn       net.Conn
 	Timeout    time.Duration
 }
