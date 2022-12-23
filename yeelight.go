@@ -125,7 +125,7 @@ func (yl *Yeelight) GetProperty(name string) (r Response, err error) {
 
 // Wrapper Methods
 
-func (yl *Yeelight, options Options) SetHexColor(color string) (err error) {
+func (yl *Yeelight) SetHexColor(color string, options Options) (err error) {
 	color = strings.Replace(color, "#", "", -1)
 	n, err := strconv.ParseUint(color, 16, 64)
 	if err != nil {
@@ -161,7 +161,7 @@ func (yl *Yeelight) GetHexColor() (h string, err error) {
 	return h, nil
 }
 
-func (yl *Yeelight, options Options) SetBright(value int8) (err error) {
+func (yl *Yeelight) SetBright(value int8, options Options) (err error) {
 	c := Command{
 		Method: "set_bright",
 		Params: []interface{}{value, "smooth", options.Smooth},
@@ -175,7 +175,7 @@ func (yl *Yeelight, options Options) SetBright(value int8) (err error) {
 	return nil
 }
 
-func (yl *Yeelight, options Options) SetColorTemperature(value int16) (err error) {
+func (yl *Yeelight) SetColorTemperature(value int16, options Options) (err error) {
 	c := Command{
 		Method: "set_ct_abx",
 		Params: []interface{}{value, "smooth", options.Smooth},
@@ -204,7 +204,7 @@ func (yl *Yeelight) GetBright() (value int8, err error) {
 	return value, nil
 }
 
-func (yl *Yeelight, options Options) SetOn() (err error) {
+func (yl *Yeelight) SetOn(options Options) (err error) {
 	c := Command{
 		Method: "set_power",
 		Params: []interface{}{"on", "smooth", options.Smooth},
@@ -218,7 +218,7 @@ func (yl *Yeelight, options Options) SetOn() (err error) {
 	return nil
 }
 
-func (yl *Yeelight, options Options) SetOff() (err error) {
+func (yl *Yeelight) SetOff(options Options) (err error) {
 	c := Command{
 		Method: "set_power",
 		Params: []interface{}{"off", "smooth", options.Smooth},
