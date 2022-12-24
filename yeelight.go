@@ -256,3 +256,17 @@ func (yl *Yeelight) IsOn() (b bool, err error) {
 
 	return b, err
 }
+
+func (yl *Yeelight) Sleep(s int8) (err error) {
+	c := Command{
+		Method: "cron_add",
+		Params: []interface{}{0, s},
+	}
+
+	_, err = yl.SendCommand(c)
+	if err != nil {
+		return
+	}
+
+	return nil
+}
