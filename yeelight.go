@@ -12,10 +12,10 @@ import (
 )
 
 type Yeelight struct {
-	YLID 	   int32       		`json:"id"`
-	Address    string      		`json:"address"`
-	Persistent bool        		`json:"persistent",default0:"false"`
-	Conn       net.Conn		 	`json:"-"`
+	YLID       int32    `json:"id"`
+	Address    string   `json:"address"`
+	Persistent bool     `json:"persistent",default0:"false"`
+	Conn       net.Conn `json:"-"`
 	Timeout    time.Duration
 }
 
@@ -32,15 +32,95 @@ type Response struct {
 }
 
 type Options struct {
-	Smooth     int `default0:"200"`
+	Smooth int `default0:"200"`
 }
 
-type RGB struct {
-	Value int
+type FxMode struct {
+	Mode string `json:"mode"`
 }
 
-func (rgb *RGB) ToHex() string {
-	return fmt.Sprintf("%06x", rgb.Value)
+type Color struct {
+	Value int64
+}
+
+type ColorMatrix struct {
+	Colors []Color
+}
+
+func MakeHexMatrix(matrix []string) ColorMatrix {
+	colorMatrix := ColorMatrix{}
+	for _, element := range matrix {
+		colorMatrix.Colors = append(colorMatrix.Colors, MakeColorHEX(element))
+	}
+
+	return colorMatrix
+}
+
+func (matrix *ColorMatrix) ToASCII() string {
+	ascii := ""
+	for _, element := range matrix.Colors {
+		ascii += element.ToASCII()
+	}
+
+	return ascii
+}
+
+func MakeColorRGB(r int8, g int8, b int8) Color {
+	color := Color{}
+	color.RGB(r, g, b)
+	return color
+}
+
+func MakeColorHEX(hex string) Color {
+	color := Color{}
+	color.Hex(hex)
+	return color
+}
+
+func (color *Color) ToHex() string {
+	return fmt.Sprintf("%06x", color.Value)
+}
+
+func (color *Color) Hex(hexv string) (err error) {
+	color.Value, err = strconv.ParseInt(strings.Trim(hexv, " # "), 16, 64)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (color *Color) RGB(r int8, g int8, b int8) {
+	color.Value = int64(b)
+	color.Value += (int64(r) << 16)
+	color.Value += (int64(g) << 8)
+}
+
+func (color *Color) ToRGB() (r byte, g byte, b byte) {
+	r = byte((color.Value & 0xFF0000) >> 16)
+	g = byte((color.Value & 0x00FF00) >> 8)
+	b = byte(color.Value & 0x0000FF)
+	return
+}
+
+func (color *Color) ToASCII() (result string) {
+	ASCII_TABLE := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+	total_bytes := color.Value / 64
+	colorValue := color.Value % 64
+
+	var encoded_data []byte
+
+	encoded_data = append(encoded_data, ASCII_TABLE[total_bytes/4096])
+	total_bytes = total_bytes % 4096
+
+	encoded_data = append(encoded_data, ASCII_TABLE[total_bytes/64])
+	total_bytes = total_bytes % 64
+
+	encoded_data = append(encoded_data, ASCII_TABLE[total_bytes])
+	encoded_data = append(encoded_data, ASCII_TABLE[colorValue])
+	result = string(encoded_data)
+	return
 }
 
 func (c *Command) GenerateID() {
@@ -95,14 +175,32 @@ func (yl *Yeelight) SendCommand(c Command) (r Response, err error) {
 		return r, err
 	}
 
-	responseBuf := bufio.NewReader(yl.Conn)
-	response, err := responseBuf.ReadSlice('\n')
-	if err != nil {
-		return r, err
-	}
+	s := make(chan string)
+	e := make(chan error)
 
-	r.FromJson(response)
-	return r, err
+	go func() {
+		reader := bufio.NewReader(yl.Conn)
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			e <- err
+		} else {
+			s <- response
+		}
+		close(s)
+		close(e)
+	}()
+
+	timeout := time.Duration(yl.Timeout) * time.Millisecond
+
+	select {
+	case response := <-s:
+		r.FromJson([]byte(response))
+		return r, nil
+	case err := <-e:
+		return r, err
+	case <-time.After(timeout):
+		return r, nil
+	}
 }
 
 func (yl *Yeelight) GetProperties(names []string) (r Response, err error) {
@@ -153,7 +251,7 @@ func (yl *Yeelight) GetHexColor() (h string, err error) {
 
 	value, err := strconv.Atoi(r.Result.([]interface{})[0].(string))
 
-	rgb := RGB{Value: value}
+	rgb := Color{Value: int64(value)}
 	if err != nil {
 		return h, err
 	}
@@ -269,4 +367,38 @@ func (yl *Yeelight) Sleep(s int8) (err error) {
 	}
 
 	return nil
+}
+
+func (yl *Yeelight) SetMatrix(matrix ColorMatrix) (err error) {
+
+	c := Command{
+		Method: "update_leds",
+		Params: []interface{}{matrix.ToASCII()},
+	}
+
+	_, err = yl.SendCommand(c)
+	if err != nil {
+		return
+	}
+
+	return nil
+}
+
+func (yl *Yeelight) SetDirectMode() (err error) {
+	mode := FxMode{Mode: "direct"}
+	c := Command{
+		Method: "activate_fx_mode",
+		Params: []interface{}{mode},
+	}
+
+	_, err = yl.SendCommand(c)
+	if err != nil {
+		return
+	}
+
+	return nil
+}
+
+func (yl *Yeelight) Disconnect() {
+	yl.Conn.Close()
 }
