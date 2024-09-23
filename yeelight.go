@@ -12,11 +12,12 @@ import (
 )
 
 type Yeelight struct {
-	YLID       int32    `json:"id"`
-	Address    string   `json:"address"`
-	Persistent bool     `json:"persistent",default0:"false"`
-	Conn       net.Conn `json:"-"`
-	Timeout    time.Duration
+	YLID            int32    `json:"id"`
+	Address         string   `json:"address"`
+	Persistent      bool     `json:"persistent",default0:"false"`
+	Conn            net.Conn `json:"-"`
+	ConnectTimeout  time.Duration
+	ResponseTimeout time.Duration
 }
 
 type Command struct {
@@ -144,11 +145,11 @@ func (r *Response) FromJson(data []byte) error {
 }
 
 func (yl *Yeelight) Connect() (err error) {
-	if yl.Timeout == 0 {
-		yl.Timeout = 3 * time.Second
+	if yl.ConnectTimeout == 0 {
+		yl.ConnectTimeout = 3 * time.Second
 	}
 
-	yl.Conn, err = net.DialTimeout("tcp", yl.Address, yl.Timeout)
+	yl.Conn, err = net.DialTimeout("tcp", yl.Address, yl.ConnectTimeout)
 	if err != nil {
 		return err
 	}
@@ -190,7 +191,9 @@ func (yl *Yeelight) SendCommand(c Command) (r Response, err error) {
 		close(e)
 	}()
 
-	timeout := time.Duration(yl.Timeout) * time.Millisecond
+	if yl.ResponseTimeout == 0 {
+		yl.ResponseTimeout = 500 * time.Millisecond
+	}
 
 	select {
 	case response := <-s:
@@ -198,7 +201,7 @@ func (yl *Yeelight) SendCommand(c Command) (r Response, err error) {
 		return r, nil
 	case err := <-e:
 		return r, err
-	case <-time.After(timeout):
+	case <-time.After(yl.ResponseTimeout):
 		return r, nil
 	}
 }
