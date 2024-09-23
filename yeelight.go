@@ -12,8 +12,11 @@ import (
 )
 
 type Yeelight struct {
-	Address string
-	Conn    net.Conn
+	YLID 	   int32       		`json:"id"`
+	Address    string      		`json:"address"`
+	Persistent bool        		`json:"persistent",default0:"false"`
+	Conn       net.Conn		 	`json:"-"`
+	Timeout    time.Duration
 }
 
 type Command struct {
@@ -26,6 +29,10 @@ type Response struct {
 	ID     int32       `json:"id"`
 	Result interface{} `json:"result,omitempty"`
 	Error  interface{} `json:"error,omitempty"`
+}
+
+type Options struct {
+	Smooth     int `default0:"200"`
 }
 
 type RGB struct {
@@ -57,7 +64,11 @@ func (r *Response) FromJson(data []byte) error {
 }
 
 func (yl *Yeelight) Connect() (err error) {
-	yl.Conn, err = net.Dial("tcp", yl.Address)
+	if yl.Timeout == 0 {
+		yl.Timeout = 3 * time.Second
+	}
+
+	yl.Conn, err = net.DialTimeout("tcp", yl.Address, yl.Timeout)
 	if err != nil {
 		return err
 	}
@@ -70,7 +81,10 @@ func (yl *Yeelight) SendCommand(c Command) (r Response, err error) {
 	if err = yl.Connect(); err != nil {
 		return
 	}
-	defer yl.Conn.Close()
+
+	if !yl.Persistent {
+		defer yl.Conn.Close()
+	}
 
 	cmdJSON, err := c.ToJson()
 	if err != nil {
@@ -111,7 +125,7 @@ func (yl *Yeelight) GetProperty(name string) (r Response, err error) {
 
 // Wrapper Methods
 
-func (yl *Yeelight) SetHexColor(color string) (err error) {
+func (yl *Yeelight) SetHexColor(color string, options Options) (err error) {
 	color = strings.Replace(color, "#", "", -1)
 	n, err := strconv.ParseUint(color, 16, 64)
 	if err != nil {
@@ -120,7 +134,7 @@ func (yl *Yeelight) SetHexColor(color string) (err error) {
 
 	c := Command{
 		Method: "set_rgb",
-		Params: []interface{}{n, "smooth", 500},
+		Params: []interface{}{n, "smooth", options.Smooth},
 	}
 
 	_, err = yl.SendCommand(c)
@@ -147,10 +161,24 @@ func (yl *Yeelight) GetHexColor() (h string, err error) {
 	return h, nil
 }
 
-func (yl *Yeelight) SetBright(value int8) (err error) {
+func (yl *Yeelight) SetBright(value int8, options Options) (err error) {
 	c := Command{
 		Method: "set_bright",
-		Params: []interface{}{value, "smooth", 500},
+		Params: []interface{}{value, "smooth", options.Smooth},
+	}
+
+	_, err = yl.SendCommand(c)
+	if err != nil {
+		return
+	}
+
+	return nil
+}
+
+func (yl *Yeelight) SetColorTemperature(value int16, options Options) (err error) {
+	c := Command{
+		Method: "set_ct_abx",
+		Params: []interface{}{value, "smooth", options.Smooth},
 	}
 
 	_, err = yl.SendCommand(c)
@@ -176,10 +204,10 @@ func (yl *Yeelight) GetBright() (value int8, err error) {
 	return value, nil
 }
 
-func (yl *Yeelight) SetOn() (err error) {
+func (yl *Yeelight) SetOn(options Options) (err error) {
 	c := Command{
 		Method: "set_power",
-		Params: []interface{}{"on", "smooth", 500},
+		Params: []interface{}{"on", "smooth", options.Smooth},
 	}
 
 	_, err = yl.SendCommand(c)
@@ -190,10 +218,10 @@ func (yl *Yeelight) SetOn() (err error) {
 	return nil
 }
 
-func (yl *Yeelight) SetOff() (err error) {
+func (yl *Yeelight) SetOff(options Options) (err error) {
 	c := Command{
 		Method: "set_power",
-		Params: []interface{}{"off", "smooth", 500},
+		Params: []interface{}{"off", "smooth", options.Smooth},
 	}
 
 	_, err = yl.SendCommand(c)
@@ -227,4 +255,18 @@ func (yl *Yeelight) IsOn() (b bool, err error) {
 	b = (r.Result.([]interface{})[0].(string) == "on")
 
 	return b, err
+}
+
+func (yl *Yeelight) Sleep(s int8) (err error) {
+	c := Command{
+		Method: "cron_add",
+		Params: []interface{}{0, s},
+	}
+
+	_, err = yl.SendCommand(c)
+	if err != nil {
+		return
+	}
+
+	return nil
 }
