@@ -48,7 +48,27 @@ type ColorMatrix struct {
 	Colors []Color
 }
 
-func MakeHexMatrix(matrix []string) ColorMatrix {
+type Vector struct {
+	Row    int
+	Column int
+}
+
+func (v *Vector) Index() int {
+	r := v.Column
+	r += (v.Row * 5)
+	return r
+}
+
+func MakeMatrix(hex string, size int) ColorMatrix {
+	colorMatrix := ColorMatrix{}
+	for i := 0; i < size; i++ {
+		colorMatrix.Colors = append(colorMatrix.Colors, MakeColorHEX(hex))
+	}
+
+	return colorMatrix
+}
+
+func MakeFromHexColors(matrix []string) ColorMatrix {
 	colorMatrix := ColorMatrix{}
 	for _, element := range matrix {
 		colorMatrix.Colors = append(colorMatrix.Colors, MakeColorHEX(element))
@@ -64,6 +84,28 @@ func (matrix *ColorMatrix) ToASCII() string {
 	}
 
 	return ascii
+}
+
+func (matrix *ColorMatrix) FillHex(h string) {
+	for index, element := range matrix.Colors {
+		element.Hex(h)
+		matrix.Colors[index] = element
+	}
+}
+
+func (matrix *ColorMatrix) FillRGB(r int8, g int8, b int8) {
+	for index, element := range matrix.Colors {
+		element.RGB(r, g, b)
+		matrix.Colors[index] = element
+	}
+}
+
+func (matrix *ColorMatrix) SetHex(v Vector, h string) {
+	matrix.Colors[v.Index()].Hex(h)
+}
+
+func (matrix *ColorMatrix) SetRGB(v Vector, r int8, g int8, b int8) {
+	matrix.Colors[v.Index()].RGB(r, g, b)
 }
 
 func MakeColorRGB(r int8, g int8, b int8) Color {
@@ -372,11 +414,27 @@ func (yl *Yeelight) Sleep(s int8) (err error) {
 	return nil
 }
 
-func (yl *Yeelight) SetMatrix(matrix ColorMatrix) (err error) {
+func (yl *Yeelight) SetMatrix(matrix []ColorMatrix) (err error) {
+	ascii := ""
+
+	for _, element := range matrix {
+		ascii += element.ToASCII()
+	}
+
+	err = yl.SetASCII(ascii)
+
+	if err != nil {
+		return
+	}
+
+	return nil
+}
+
+func (yl *Yeelight) SetASCII(ascii string) (err error) {
 
 	c := Command{
 		Method: "update_leds",
-		Params: []interface{}{matrix.ToASCII()},
+		Params: []interface{}{ascii},
 	}
 
 	_, err = yl.SendCommand(c)
