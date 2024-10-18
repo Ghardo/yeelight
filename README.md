@@ -1,6 +1,7 @@
 # yeelight
 Very simple yeelight control without discover
 
+basic example
 ```go
 package main
 
@@ -12,7 +13,7 @@ import (
 )
 
 func main() {
-	yl := yeelight.Yeelight{Address: "IP:55443"}
+	yl := yeelight.Yeelight{Address: "<local-ip>:55443"}
 	yl.SetHexColor("#f59542")
 	yl.SetOn()
 	fmt.Println(yl.IsOn())
