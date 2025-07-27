@@ -13,10 +13,10 @@ import (
 )
 
 type Yeelight struct {
-	YLID            int32    `json:"id"`
-	Address         string   `json:"address"`
-	Persistent      bool     `json:"persistent",default0:"false"`
-	Conn            net.Conn `json:"-"`
+	YLID            int32         `json:"id"`
+	Address         string        `json:"address"`
+	Persistent      bool          `json:"persistent",default0:"false"`
+	Conn            net.Conn      `json:"-"`
 	ConnectTimeout  time.Duration
 	ResponseTimeout time.Duration
 }
@@ -53,6 +53,32 @@ type Vector struct {
 	Row    int
 	Column int
 }
+
+// FlowState defines a single state in a color flow.
+type FlowState struct {
+	Duration   int
+	Mode       FlowMode
+	Value      int
+	Brightness int
+}
+
+// FlowMode defines the type of a flow state.
+type FlowMode int
+
+const (
+	FlowModeColor FlowMode = 1
+	FlowModeTemp  FlowMode = 2
+	FlowModeSleep FlowMode = 7
+)
+
+// CfAction defines the action to take after a color flow finishes.
+type CfAction int
+
+const (
+	CfActionRecover CfAction = 0 // Revert to the state before the flow
+	CfActionStay    CfAction = 1 // Stay at the last state of the flow
+	CfActionOff     CfAction = 2 // Turn off the light
+)
 
 func (v *Vector) Index() int {
 	r := v.Column
@@ -500,6 +526,46 @@ func (yl *Yeelight) SetDirectMode() (err error) {
 	_, err = yl.SendCommand(c)
 	if err != nil {
 		return
+	}
+
+	return nil
+}
+
+// StartCf starts a color flow.
+// count: how many times to repeat the flow. 0 means infinite.
+// action: what to do after the flow finishes.
+// flow: a slice of FlowState structs defining the flow.
+func (yl *Yeelight) StartCf(count int, action CfAction, flow []FlowState) error {
+	var stateStrings []string
+	for _, state := range flow {
+		s := fmt.Sprintf("%d,%d,%d,%d", state.Duration, state.Mode, state.Value, state.Brightness)
+		stateStrings = append(stateStrings, s)
+	}
+	flowExpression := strings.Join(stateStrings, ",")
+
+	c := Command{
+		Method: "start_cf",
+		Params: []interface{}{count, int(action), flowExpression},
+	}
+
+	_, err := yl.SendCommand(c)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// StopCf stops the currently running color flow.
+func (yl *Yeelight) StopCf() error {
+	c := Command{
+		Method: "stop_cf",
+		Params: []interface{}{},
+	}
+
+	_, err := yl.SendCommand(c)
+	if err != nil {
+		return err
 	}
 
 	return nil
