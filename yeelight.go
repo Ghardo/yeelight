@@ -574,3 +574,18 @@ func (yl *Yeelight) StopCf() error {
 func (yl *Yeelight) Disconnect() {
 	yl.Conn.Close()
 }
+
+// SetName sets a new name for the Yeelight.
+func (yl *Yeelight) SetName(name string) error {
+	c := Command{
+		Method: "set_name",
+		Params: []interface{}{name},
+	}
+
+	_, err := yl.SendCommand(c)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
