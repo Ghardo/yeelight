@@ -538,10 +538,12 @@ func (yl *Yeelight) SetDirectMode() (err error) {
 func (yl *Yeelight) StartCf(count int, action CfAction, flow []FlowState) error {
 	var stateStrings []string
 	for _, state := range flow {
-		s := fmt.Sprintf("%d,%d,%d,%d", state.Duration, state.Mode, state.Value, state.Brightness)
+		s := fmt.Sprintf("%d,%d,%d,%d", state.Duration, int(state.Mode), state.Value, state.Brightness)
 		stateStrings = append(stateStrings, s)
 	}
-	flowExpression := strings.Join(stateStrings, ",")
+
+	// semicolon required by hardware to separate state tuples
+	flowExpression := strings.Join(stateStrings, ";")
 
 	c := Command{
 		Method: "start_cf",
