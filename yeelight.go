@@ -541,8 +541,7 @@ func (yl *Yeelight) StartCf(count int, action CfAction, flow []FlowState) error 
 		s := fmt.Sprintf("%d,%d,%d,%d", state.Duration, int(state.Mode), state.Value, state.Brightness)
 		stateStrings = append(stateStrings, s)
 	}
-
-	// semicolon required by hardware to separate state tuples
+    
 	flowExpression := strings.Join(stateStrings, ";")
 
 	c := Command{
@@ -551,11 +550,7 @@ func (yl *Yeelight) StartCf(count int, action CfAction, flow []FlowState) error 
 	}
 
 	_, err := yl.SendCommand(c)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // StopCf stops the currently running color flow.
