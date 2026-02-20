@@ -541,12 +541,17 @@ func (yl *Yeelight) StartCf(count int, action CfAction, flow []FlowState) error 
 		s := fmt.Sprintf("%d,%d,%d,%d", state.Duration, int(state.Mode), state.Value, state.Brightness)
 		stateStrings = append(stateStrings, s)
 	}
-    
-	flowExpression := strings.Join(stateStrings, ";")
+
+	flowExpression := strings.Join(stateStrings, ",")
+
+	totalSteps := count
+	if count > 0 {
+		totalSteps = count * len(flow)
+	}
 
 	c := Command{
 		Method: "start_cf",
-		Params: []interface{}{count, int(action), flowExpression},
+		Params: []interface{}{totalSteps, int(action), flowExpression},
 	}
 
 	_, err := yl.SendCommand(c)
