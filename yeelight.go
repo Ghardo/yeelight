@@ -310,12 +310,14 @@ func (yl *Yeelight) SendCommand(c Command) (r Response, err error) {
 
 	select {
 	case response := <-s:
-		r.FromJson([]byte(response))
+		if err := r.FromJson([]byte(response)); err != nil {
+			return r, fmt.Errorf("failed to parse response: %w", err)
+		}
 		return r, nil
 	case err := <-e:
 		return r, err
 	case <-time.After(yl.ResponseTimeout):
-		return r, nil
+		return r, fmt.Errorf("response timeout after %v", yl.ResponseTimeout)
 	}
 }
 
